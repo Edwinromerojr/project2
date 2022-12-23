@@ -4,7 +4,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
 
-from .models import User
+from .models import User, Category, Listing
 
 
 def index(request):
@@ -61,3 +61,36 @@ def register(request):
         return HttpResponseRedirect(reverse("index"))
     else:
         return render(request, "auctions/register.html")
+
+#create listing
+def createListing(request):
+    if request.method == "GET":
+        allCategories = Category.objects.all()
+        return render(request, "auctions/create.html", {
+            "categories": allCategories
+        })
+    else:
+        # Get data from the form
+        title = request.POST["title"]
+        description = request.POST["description"]
+        imageurl = request.POST["imageurl"]
+        price = request.POST["price"]
+        category = request.POST["category"]
+        # Who is the user
+        currentUser = request.user
+        #ValueError at /create Cannot assign "'shirt'": "Listing.category" must be a "Category" instance.
+        # Get all content about the particular category
+        categoryData = Category.objects.get(categoryName=category)
+        # Create a new listing object
+        newListing = Listing(
+            title=title,
+            description=description,
+            imageUrl=imageurl,
+            price=float(price),
+            category=categoryData,
+            owner=currentUser
+        )
+        # Insert the object in our database
+        newListing.save()
+        # Redirect to index page
+        return HttpResponseRedirect(reverse(index))
