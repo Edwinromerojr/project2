@@ -10,8 +10,10 @@ from .models import User, Category, Listing
 def index(request):
     #active Listing
     activeListings = Listing.objects.filter(isActive=True)
+    allCategories = Category.objects.all()
     return render(request, "auctions/index.html", {
-        "listings": activeListings
+        "listings": activeListings,
+        "categories": allCategories
     })
 
 
@@ -98,3 +100,16 @@ def createListing(request):
         newListing.save()
         # Redirect to index page
         return HttpResponseRedirect(reverse(index))
+
+#Display Categories
+def displayCategory(request):
+    if request.method == "POST":
+        categoryFromForm = request.POST['category']
+        category = Category.objects.get(categoryName=categoryFromForm)
+        activeListings = Listing.objects.filter(isActive=True, category=category)
+        allCategories = Category.objects.all()
+        return render(request, "auctions/index.html", {
+            "listings": activeListings,
+            "categories": allCategories
+        })
+    
