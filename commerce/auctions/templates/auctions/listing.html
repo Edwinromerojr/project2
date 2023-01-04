@@ -1,0 +1,22 @@
+{% extends "auctions/layout.html" %}
+
+{% block body %}
+
+    <div>
+        {% if user.is_authenticated %}
+        {% endif %}
+    </div>
+
+    <h1>Listing: {{listing.title}}</h1>
+    <img src="{{listing.imageUrl}}" alt="{{listing.title}}">
+    <p>{{listing.description}}</p>
+    <h3>{{listing.price}} Peso</h3>
+    <p></p>
+    <input type="text" class="my-3"><br>
+    <button type="button" class="btn btn-primary">Primary</button>
+    <h3>Details</h3>
+    <ul>
+        <li>Listed by: {{listing.owner}}</li>
+        <li>Category: {{listing.category}}</li>
+    </ul>
+{% endblock %}
