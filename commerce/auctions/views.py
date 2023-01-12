@@ -4,7 +4,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
 
-from .models import User, Category, Listing
+from .models import User, Category, Listing, Bidding, Bid
 
 
 def index(request):
@@ -87,12 +87,15 @@ def createListing(request):
         #ValueError at /create Cannot assign "'shirt'": "Listing.category" must be a "Category" instance.
         # Get all content about the particular category
         categoryData = Category.objects.get(categoryName=category)
+        # create a bid object
+        bid = Bid(bid=int(price), user=currentUser)
+        bid.save()
         # Create a new listing object
         newListing = Listing(
             title=title,
             description=description,
             imageUrl=imageurl,
-            price=float(price),
+            price=bid,
             category=categoryData,
             owner=currentUser
         )
@@ -116,6 +119,87 @@ def displayCategory(request):
 #listing page
 def listing(request, id):
     listingData = Listing.objects.get(pk=id)
+    #for comments 2
+    isListingInWatchlist = request.user in listingData.watchlist.all()
+    allComments = Bidding.objects.filter(listing=listingData)
+    #close action
+    isOwner = request.user.username == listingData.owner.username
     return render(request, "auctions/listing.html", {
-        "listing": listingData
+        "listing": listingData,
+        "isListingInWatchlist": isListingInWatchlist,
+        "allComments":allComments,
+        "isOwner": isOwner
+    })
+
+#Watchlist
+def removeWacthlist(request, id):
+    listingData = Listing.objects.get(pk=id)
+    currentUser = request.user
+    listingData.watchlist.remove(currentUser)
+    return HttpResponseRedirect(reverse("listing", args=(id, )))
+
+def addWacthlist(request, id):
+    listingData = Listing.objects.get(pk=id)
+    currentUser = request.user
+    listingData.watchlist.add(currentUser)
+    return HttpResponseRedirect(reverse("listing", args=(id, )))
+
+def displayWatchlist(request):
+    currentUser = request.user
+    listings = currentUser.listWatchlist.all()
+    return render(request, "auctions/watchlist.html", {
+        "listings": listings
+    })
+#Comment
+def addBidding(request, id):
+    currentUser = request.user
+    listingData = Listing.objects.get(pk=id)
+    message = request.POST['newBid']
+
+    newBid = Bidding(
+        author=currentUser,
+        listing=listingData,
+        message=message
+    )
+    newBid.save()
+    return HttpResponseRedirect(reverse("listing", args=(id, )))
+
+#Bidding
+def addBid(request, id):
+    newBid = request.POST['newBid']
+    listingData = Listing.objects.get(pk=id)
+    #sample2
+    isListingInWatchlist = request.user in listingData.watchlist.all()
+    allComments = Bidding.objects.filter(listing=listingData)
+    if int(newBid) > listingData.price.bid:
+        updateBid = Bid(user=request.user, bid=int(newBid))
+        updateBid.save()
+        listingData.price = updateBid
+        listingData.save()
+        return render(request, "auctions/listing.html", {
+            "listing":listingData,
+            "message": "Bid was updated successfully",
+            "update":True,
+            "isListingInWatchlist": isListingInWatchlist,
+            "allComments":allComments
+        })
+    else:
+        return render(request, "auctions/listing.html", {
+            "listing":listingData,
+            "message": "Bid updated failed",
+            "update":False,
+            "isListingInWatchlist": isListingInWatchlist,
+            "allComments":allComments
+        })
+
+def closeAuction(request, id):
+    listingData = Listing.objects.get(pk=id)
+    listingData.isActive = False
+    listingData.save()
+    isOwner = request.user.username == listingData.owner.username
+    return render(request, "auctions/listing.html", {
+        "listing": listingData,
+        "isOwner": isOwner,
+        "update": True,
+        "message": "Congratulations! Your auction is closed."
     })
